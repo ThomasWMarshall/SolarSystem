@@ -9,8 +9,8 @@
 
   varying vec4 fColor;
 
-  uniform mat4 worldToCanonicalView;
-  uniform mat4 transform;
+  uniform mat4 pMatrix;
+  uniform mat4 mvMatrix;
 
   // Now take the normal matrix as computed by the CPU
   uniform mat4 normalMatrix;
@@ -19,7 +19,7 @@
   void main() {
     vec4 norm = normalize(normalMatrix * vNormal);
 
-    gl_Position = worldToCanonicalView * transform * vPosition;
+    gl_Position = pMatrix * mvMatrix * vPosition;
 
     fColor = vec4((dot(lookVector, norm) * vColor).xyz, 1.0);
   }
