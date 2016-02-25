@@ -17,29 +17,29 @@ window.onload = function init() {
   gl.enable(gl.DEPTH_TEST);
 
   // Initilize the shaders
-  var program = initShaders(gl, "vertex-shader", "fragment-shader");
+  program = initShaders(gl, "vertex-shader", "fragment-shader");
   gl.useProgram(program)
 
   // Create buffers
-  var cBuffer = gl.createBuffer();
-  var vBuffer = gl.createBuffer();
-  var nBuffer = gl.createBuffer();
+  cBuffer = gl.createBuffer();
+  vBuffer = gl.createBuffer();
+  nBuffer = gl.createBuffer();
 
   // Get the ids of shader attributes
-  var vPositionLoc     = gl.getAttribLocation(program,  "vPosition"   );
-  var vColorLoc        = gl.getAttribLocation(program,  "vColor"      );
-  var vNormalLoc       = gl.getAttribLocation(program,  "vNormal"     );
+  vPositionLoc     = gl.getAttribLocation(program,  "vPosition"   );
+  vColorLoc        = gl.getAttribLocation(program,  "vColor"      );
+  vNormalLoc       = gl.getAttribLocation(program,  "vNormal"     );
 
   // Get the ids of shader uniforms
-  var lookVectorLoc    = gl.getUniformLocation(program, "lookVector"  );
-  var pMatrixLoc       = gl.getUniformLocation(program, "pMatrix"     );
-  var mvMatrix         = gl.getUniformLocation(program, "mvMatrix"    );
-  var normalMatrixLoc  = gl.getUniformLocation(program, "normalMatrix");
+  lookVectorLoc    = gl.getUniformLocation(program, "lookVector"  );
+  pMatrixLoc       = gl.getUniformLocation(program, "pMatrix"     );
+  mvMatrixLoc      = gl.getUniformLocation(program, "mvMatrix"    );
+  normalMatrixLoc  = gl.getUniformLocation(program, "normalMatrix");
 
   // Link the buffers to their corresponding js representations
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-  gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(vPosition);
+  gl.vertexAttribPointer(vPositionLoc, 4, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(vPositionLoc);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
   gl.vertexAttribPointer(vColorLoc, 4, gl.FLOAT, false, 0, 0);
@@ -49,20 +49,20 @@ window.onload = function init() {
   gl.vertexAttribPointer(vNormalLoc, 4, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vNormalLoc);
 
-  var scene = {
-    transforms: mat4(),
+  scene = {
+    transforms: [mat4()],
     colors: [vec4(0,0,1,1)]
   };
 
   render();
 }
 
-var render = function(){
+function render(){
 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     var eye     = vec3(0.0, 3.0, 1.5)
-    var look_at = vec3(0.0, 0.0, 0.0)
+    var at = vec3(0.0, 0.0, 0.0)
     var up      = vec3(0.0, 1.0, 0.0)
     var near    = 0.01
     var far     = 100
