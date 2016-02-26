@@ -4,24 +4,26 @@
   <script id = "vertex-shader" type = "x-shader/x-vertex">
 
   attribute vec4 vPosition;
-  attribute vec4 vColor;
-  attribute vec4 vNormal;
+  //attribute vec4 vNormal;
 
   varying vec4 fColor;
 
   uniform mat4 pMatrix;
   uniform mat4 mvMatrix;
+  uniform mat4 transform;
+
+  uniform vec4 vColor;
 
   // Now take the normal matrix as computed by the CPU
   uniform mat4 normalMatrix;
   uniform vec4 lookVector;
 
   void main() {
-    vec4 norm = normalize(normalMatrix * vNormal);
+  //  vec4 norm = normalize(normalMatrix * vNormal);
 
-    gl_Position = pMatrix * mvMatrix * vPosition;
+    gl_Position = pMatrix * mvMatrix * transform * vPosition;
 
-    fColor = vec4((dot(lookVector, norm) * vColor).xyz, 1.0);
+    fColor = vColor; //vec4((dot(lookVector, norm) * vColor).xyz, 1.0);
   }
 
   </script>

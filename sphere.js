@@ -12,6 +12,7 @@ function sphere(k) {
       ));
     }
   }
+  points.push(vec4(0, -1, 0, 1));
   var tris = [];
   for (var i = 1 ; i < k+1 ; i += 1) {
     tris.push([0, i, i%k+1]);
