@@ -41,19 +41,22 @@ window.onload = function init() {
   gl.vertexAttribPointer(vPositionLoc, 4, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vPositionLoc);
 
-  // gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-  // gl.vertexAttribPointer(vNormalLoc, 4, gl.FLOAT, false, 0, 0);
-  // gl.enableVertexAttribArray(vNormalLoc);
+  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
+  gl.vertexAttribPointer(vNormalLoc, 4, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(vNormalLoc);
 
   scene = {
     transforms: [mat4()],
     colors: [vec4(0,0,1,1)]
   };
 
-  sphereVerts = sphere(100).verts;
+  sphereData = processSphere(sphere(20));
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereVerts), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.norms), gl.STATIC_DRAW);
 
   eye     = vec3(4.0, 0.0, 0.0)
   at      = vec3(0.0, 0.0, 0.0)
@@ -63,7 +66,7 @@ window.onload = function init() {
   fovy    = 45
   aspect  = 1
 
-  lookAtVector = subtract(at, eye);
+  lookAtVector = vec4(subtract(at, eye));
 
   keyDownList = {
     forward: false,
@@ -107,26 +110,21 @@ window.onload = function init() {
   }, false);
 
   window.addEventListener("mousemove", function(event) {
-    if (pointerLocked) {
-      at[0] += event.movementX * normalize(cross(vec3(lookAtVector), up));
-      at[1] += event.movementY * normalize(up);
+    if(document.pointerLockElement === canvas    ||
+       document.mozPointerLockElement === canvas ||
+       document.webkitPointerLockElement === canvas) {
+      fpvRight = normalize(cross(vec3(lookAtVector), up));
+      fpvTop = normalize(cross(fpvRight, lookAtVector));
+      at = add(at, scale(-event.movementX, fpvRight));
+      at = add(at, scale(-event.movementY, fpvTop));
     }
   }, false);
-
-  pointerLocked = false;
 
   // Capture the mouse when the user clicks on the canvas
   canvas.onclick =
     document.body.requestPointerLock    ||
     document.body.mozRequestPointerLock ||
     document.body.webkitRequestPointerLock;
-
-  document.addEventListener("pointerlockchange", function() {
-    pointerLocked = !pointerLocked;
-  }, false);
-
-  // gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-  // gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereVerts.norms), gl.STATIC_DRAW);
 
   render();
 }
@@ -135,21 +133,23 @@ function render() {
 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    movementSpeed = 0.2;
+
     if (keyDownList.back == true) {
-      eye = add(eye, vec3(lookAtVector));
-      at  = add(at,  vec3(lookAtVector));
+      eye = add(eye, scale(movementSpeed, vec3(lookAtVector)));
+      at  = add(at,  scale(movementSpeed, vec3(lookAtVector)));
     }
     if (keyDownList.forward == true) {
-      eye = subtract(eye, vec3(lookAtVector));
-      at  = subtract(at,  vec3(lookAtVector));
+      eye = subtract(eye, scale(movementSpeed, vec3(lookAtVector)));
+      at  = subtract(at,  scale(movementSpeed, vec3(lookAtVector)));
     }
     if (keyDownList.left == true) {
-      eye = add(eye, normalize(cross(vec3(lookAtVector), up)));
-      at  = add(at,  normalize(cross(vec3(lookAtVector), up)));
+      eye = add(eye, scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
+      at  = add(at,  scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
     }
     if (keyDownList.right == true) {
-      eye = subtract(eye, normalize(cross(vec3(lookAtVector), up)));
-      at  = subtract(at,  normalize(cross(vec3(lookAtVector), up)));
+      eye = subtract(eye, scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
+      at  = subtract(at,  scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
     }
 
     mvMatrix      = lookAt(eye, at, up);
@@ -169,7 +169,7 @@ function render() {
 
       gl.uniform4fv(vColorLoc, scene.colors[i]);
 
-      gl.drawArrays(gl.TRIANGLES, 0, sphereVerts.length);
+      gl.drawArrays(gl.TRIANGLES, 0, sphereData.verts.length);
 
     }
 

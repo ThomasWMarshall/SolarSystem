@@ -41,13 +41,15 @@ function processSphere(s) {
     verts.push(points[tri[0]]);
     verts.push(points[tri[1]]);
     verts.push(points[tri[2]]);
-    norms.push(vec4(
-      normalize(cross(
-        subtract(points[tri[1]], points[tri[0]]),
+    normal = vec4(
+        normalize(cross(
         subtract(points[tri[2]], points[tri[0]]),
+        subtract(points[tri[1]], points[tri[0]]),
         false
-      )), 0
-    ));
+      )), 0);
+    norms.push(normal);
+    norms.push(normal);
+    norms.push(normal);
   });
   return {
     verts : verts,
