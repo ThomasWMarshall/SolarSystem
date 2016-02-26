@@ -52,10 +52,78 @@ window.onload = function init() {
 
   sphereVerts = sphere(10).verts;
 
-  console.log(sphereVerts)
-
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereVerts), gl.STATIC_DRAW);
+
+  eye     = vec3(4.0, 0.0, 0.0)
+  at      = vec3(0.0, 0.0, 0.0)
+  up      = vec3(0.0, 1.0, 0.0)
+  near    = 0.01
+  far     = 100
+  fovy    = 45
+  aspect  = 1
+
+  lookAtVector = subtract(at, eye);
+
+  keyDownList = {
+    forward: false,
+    left:    false,
+    right:   false,
+    back:    false
+  };
+
+  window.addEventListener("keydown", function(event) {
+    switch (event.keyCode) {
+      case 87:
+        keyDownList.forward = true;
+        break;
+      case 83:
+        keyDownList.back = true;
+        break;
+      case 68:
+        keyDownList.right = true;
+        break;
+      case 65:
+        keyDownList.left = true;
+        break;
+    }
+  }, false);
+
+  window.addEventListener("keyup", function(event) {
+    switch (event.keyCode) {
+      case 87:
+        keyDownList.forward = false;
+        break;
+      case 83:
+        keyDownList.back = false;
+        break;
+      case 68:
+        keyDownList.right = false;
+        break;
+      case 65:
+        keyDownList.left = false;
+        break;
+    }
+  }, false);
+
+  window.addEventListener("mousemove", function(event) {
+    if (pointerLocked) {
+      at[0] += event.movementX * normalize(cross(vec3(lookAtVector), up));
+      at[1] += event.movementY * normalize(up);
+    }
+  }, false);
+
+  pointerLocked = false;
+
+  // Capture the mouse when the user clicks on the canvas
+  canvas.onclick =
+    document.body.requestPointerLock    ||
+    document.body.mozRequestPointerLock ||
+    document.body.webkitRequestPointerLock;
+
+  document.addEventListener("pointerlockchange", function() {
+    pointerLocked = !pointerLocked;
+  }, false);
 
   // gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
   // gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereVerts.norms), gl.STATIC_DRAW);
@@ -67,13 +135,22 @@ function render(){
 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    var eye     = vec3(4.0, 0.0, 0.0)
-    var at      = vec3(0.0, 0.0, 0.0)
-    var up      = vec3(0.0, 1.0, 0.0)
-    var near    = 0.01
-    var far     = 100
-    var fovy    = 45
-    var aspect  = 1
+    if (keyDownList.back == true) {
+      eye = add(eye, vec3(lookAtVector));
+      at  = add(at,  vec3(lookAtVector));
+    }
+    if (keyDownList.forward == true) {
+      eye = subtract(eye, vec3(lookAtVector));
+      at  = subtract(at,  vec3(lookAtVector));
+    }
+    if (keyDownList.left == true) {
+      eye = add(eye, normalize(cross(vec3(lookAtVector), up)));
+      at  = add(at,  normalize(cross(vec3(lookAtVector), up)));
+    }
+    if (keyDownList.right == true) {
+      eye = subtract(eye, normalize(cross(vec3(lookAtVector), up)));
+      at  = subtract(at,  normalize(cross(vec3(lookAtVector), up)));
+    }
 
     mvMatrix      = lookAt(eye, at , up);
     pMatrix       = perspective(fovy, aspect, near, far);
