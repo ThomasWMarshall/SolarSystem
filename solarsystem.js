@@ -50,7 +50,7 @@ window.onload = function init() {
     colors: [vec4(0,0,1,1)]
   };
 
-  sphereVerts = sphere(10).verts;
+  sphereVerts = sphere(100).verts;
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereVerts), gl.STATIC_DRAW);
@@ -131,7 +131,7 @@ window.onload = function init() {
   render();
 }
 
-function render(){
+function render() {
 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -152,7 +152,7 @@ function render(){
       at  = subtract(at,  normalize(cross(vec3(lookAtVector), up)));
     }
 
-    mvMatrix      = lookAt(eye, at , up);
+    mvMatrix      = lookAt(eye, at, up);
     pMatrix       = perspective(fovy, aspect, near, far);
     lookAtVector  = vec4(normalize(subtract(eye,at)),0.0);
 

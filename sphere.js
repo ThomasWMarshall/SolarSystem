@@ -1,29 +1,40 @@
 function sphere(k) {
-  // Generate vertices
-  var points = [vec4(0, 1, 0, 1)];
-  for (var i = 0 ; i < k ; i += 1) {
-    for (var j = 0 ; j < k ; j += 1) {
-      var theta = 2 * Math.PI / k * i;
-      var phi = Math.PI / k * j;
+  var points = [vec4(0, 1, 0)];
+  for (var i = 1 ; i < k+2 ; i++) {
+    for (var j = 0 ; j < k+3 ; j++) {
+      var theta = Math.PI / (k+1) * i;
+      var phi = 2 * Math.PI / (k+3) * j;
       points.push(vec4(
-        0.5*Math.cos(phi)*Math.cos(theta),
-        0.5*Math.sin(phi),
-        0.5*Math.cos(phi)*Math.sin(theta)
+        Math.cos(phi) * Math.sin(theta),
+        Math.cos(theta),
+        Math.sin(phi) * Math.sin(theta)
       ));
     }
   }
-  points.push(vec4(0, -1, 0, 1));
+  points.push(vec4(0, -1, 0));
+  var last = 2+(k+1)*(k+3)-1;
   var tris = [];
-  for (var i = 1 ; i < k+1 ; i += 1) {
-    tris.push([0, i, i%k+1]);
-    tris.push([k*k+1, k*k+1-i, k*k+1-(i%k + 1)]);
+  for (var i = 0 ; i < k+3 ; i++) {
+    tris.push([0,i+1,(i+1)%(k+3)+1]);
+    tris.push([last,last-(i+1),last-((i+1)%(k+3)+1)]);
   }
-  for (var i = 0 ; i < k-1 ; i += 1) {
-    for (var j = 0 ; j < k ; j += 1) {
-      tris.push([(j+1)+i*k, (j+1)%k+1+i*k, (j+1)+(i+1)*k]);
-      tris.push([(j+1)+(i+1)*k, (j+1)%k+1+(i+1)*k, (j+1)%k+1+i*k]);
+  for (var j = 0 ; j < k ; j++) {
+    for (var i = 0 ; i < k+3 ; i++) {
+      tris.push([1+i+j*(k+3),1+i+(k+3)+j*(k+3),1+(i+1)%(k+3)+(k+3)+j*(k+3)]);
+      tris.push(
+        [1+i+j*(k+3),1+(i+1)%(k+3)+(k+3)+j*(k+3),1+(i+1)%(k+3)+j*(k+3)]
+      );
     }
   }
+  return {
+    verts : points,
+    tris : tris
+  }
+}
+
+function processSphere(s) {
+  var points = s.verts;
+  var tris = s.tris;
   var verts = [];
   var norms = [];
   tris.forEach(function(tri) {
@@ -40,7 +51,7 @@ function sphere(k) {
   });
   return {
     verts : verts,
-    tris : tris,
     norms : norms
+    //txc : txc
   };
 }

@@ -22,7 +22,7 @@
   //  vec4 norm = normalize(normalMatrix * vNormal);
 
     gl_Position = pMatrix * mvMatrix * transform * vPosition;
-
+    gl_Position = vPosition;
     fColor = vColor; //vec4((dot(lookVector, norm) * vColor).xyz, 1.0);
   }
 
