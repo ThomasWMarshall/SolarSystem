@@ -18,27 +18,20 @@ canvas {
   attribute vec4 vPosition;
   attribute vec4 vNormal;
 
-  varying vec4 fColor;
-
   uniform mat4 pMatrix;
   uniform mat4 mvMatrix;
   uniform mat4 transform;
 
-  uniform vec4 vColor;
-
-  // Now take the normal matrix as computed by the CPU
   uniform mat4 normalMatrix;
-  uniform vec4 lookVector;
+
+  varying vec3 toLight;
+  varying vec3 norm;
+  // Now take the normal matrix as computed by the CPU
 
   void main() {
-    vec4 norm = normalize(vNormal);
-
+    norm = normalize(mat3(normalMatrix) * vec3(vNormal));
+    toLight = normalize((transform * vec4(0.,0,0,-1)).xyz);
     gl_Position = pMatrix * mvMatrix * transform * vPosition;
-
-    vec4 toLight = vec4(normalize((transform * vec4(0.,0,0,-1)).xyz), 0.0);
-
-    float multiplier = (dot(toLight, norm) >= 0.0) ? pow(dot(toLight, norm),1.0): 0.0;
-    fColor = vec4((multiplier * vColor).xyz, 1.0);
   }
 
   </script>
@@ -46,10 +39,14 @@ canvas {
   <script id = "fragment-shader" type = "x-shader/x-fragment">
 
   precision mediump float;
-  varying vec4 fColor;
+  varying vec3 norm;
+  varying vec3 toLight;
+
+  uniform vec4 vColor;
 
   void main() {
-    gl_FragColor = fColor;
+    float multiplier = (dot(toLight, norm) >= 0.0) ? pow(dot(toLight, norm),1.0): 0.0;
+    gl_FragColor = vec4((multiplier * vColor).xyz, 1.0);
   }
 
   </script>

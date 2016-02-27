@@ -32,12 +32,12 @@ window.onload = function init() {
   vNormalLoc       = gl.getAttribLocation(program,  "vNormal"     );
 
   // Get the ids of shader uniforms
-  lookVectorLoc    = gl.getUniformLocation(program, "lookVector"  );
+  //lookVectorLoc    = gl.getUniformLocation(program, "lookVector"  );
   pMatrixLoc       = gl.getUniformLocation(program, "pMatrix"     );
   mvMatrixLoc      = gl.getUniformLocation(program, "mvMatrix"    );
   transformLoc     = gl.getUniformLocation(program, "transform"   );
   normalMatrixLoc  = gl.getUniformLocation(program, "normalMatrix");
-  vColorLoc        = gl.getUniformLocation(program, "vColor");
+  vColorLoc        = gl.getUniformLocation(program, "vColor"      );
 
   // Link the buffers to their corresponding js representations
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
@@ -80,7 +80,7 @@ window.onload = function init() {
   fovy    = 45
   aspect  = canvas.width / canvas.height;
 
-  lookAtVector = vec4(subtract(at, eye));
+  lookVector = subtract(at, eye);
 
   keyDownList = {
     forward: false,
@@ -127,10 +127,10 @@ window.onload = function init() {
     if(document.pointerLockElement === canvas    ||
        document.mozPointerLockElement === canvas ||
        document.webkitPointerLockElement === canvas) {
-      fpvRight = normalize(cross(vec3(lookAtVector), up));
-      fpvTop = normalize(cross(fpvRight, lookAtVector));
+      fpvRight = normalize(cross(lookVector, up));
+      fpvTop = normalize(cross(fpvRight, lookVector));
       at = add(at, scale(-event.movementX, fpvRight));
-      if (Math.abs(dot(vec3(lookAtVector), up)) < 0.75 || true) {
+      if (Math.abs(dot(lookVector, up)) < 0.75 || true) {
         at = add(at, scale(-event.movementY, fpvTop));
       }
     }
@@ -152,28 +152,29 @@ function render() {
     movementSpeed = 0.2;
 
     if (keyDownList.back == true) {
-      eye = add(eye, scale(movementSpeed, vec3(lookAtVector)));
-      at  = add(at,  scale(movementSpeed, vec3(lookAtVector)));
+      eye = add(eye, scale(movementSpeed, lookVector));
+      at  = add(at,  scale(movementSpeed, lookVector));
     }
     if (keyDownList.forward == true) {
-      eye = subtract(eye, scale(movementSpeed, vec3(lookAtVector)));
-      at  = subtract(at,  scale(movementSpeed, vec3(lookAtVector)));
+      eye = subtract(eye, scale(movementSpeed, lookVector));
+      at  = subtract(at,  scale(movementSpeed, lookVector));
     }
     if (keyDownList.left == true) {
-      eye = add(eye, scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
-      at  = add(at,  scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
+      eye = add(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
+      at  = add(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
     }
     if (keyDownList.right == true) {
-      eye = subtract(eye, scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
-      at  = subtract(at,  scale(movementSpeed, normalize(cross(vec3(lookAtVector), up))));
+      eye = subtract(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
+      at  = subtract(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
     }
 
-    mvMatrix      = lookAt(eye, at, up);
-    pMatrix       = perspective(fovy, aspect, near, far);
-    lookAtVector  = vec4(normalize(subtract(eye,at)),0.0);
+    mvMatrix    = lookAt(eye, at, up);
+    pMatrix     = perspective(fovy, aspect, near, far);
+    lookVector  = normalize(subtract(eye,at));
 
-    gl.uniform4fv(lookVectorLoc, lookAtVector);
-    gl.uniformMatrix4fv(pMatrixLoc, false, flatten(pMatrix));
+    //gl.uniform4fv(lookVectorLoc, lookVector);
+
+    gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
     gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
 
     for (var i = 0; i < scene.transforms.length; i++) {
