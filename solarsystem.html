@@ -1,4 +1,16 @@
 <html>
+<style>
+canvas {
+  padding: 0;
+  margin: auto;
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+</style>
 <head>
   <title>Solar System</title>
   <script id = "vertex-shader" type = "x-shader/x-vertex">
@@ -19,10 +31,14 @@
   uniform vec4 lookVector;
 
   void main() {
-    vec4 norm = normalize(normalMatrix * vNormal);
+    vec4 norm = normalize(vNormal);
 
     gl_Position = pMatrix * mvMatrix * transform * vPosition;
-    fColor = vec4((dot(lookVector, norm) * vColor).xyz, 1.0);
+
+    vec4 toLight = vec4(normalize((transform * vec4(0.,0,0,-1)).xyz), 0.0);
+
+    float multiplier = (dot(toLight, norm) >= 0.0) ? pow(dot(toLight, norm),1.0): 0.0;
+    fColor = vec4((multiplier * vColor).xyz, 1.0);
   }
 
   </script>
@@ -46,7 +62,7 @@
   <script type="text/javascript" src="solarsystem.js"></script>
 
 </head>
-<body>
+<body bgcolor = $000000>
 
   <canvas id="gl-canvas" width="1024" height="1024">
     Error: Canvas element failed to load.

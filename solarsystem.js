@@ -12,8 +12,10 @@ window.onload = function init() {
   }
 
   // Set up the WebGL canvas
+  canvas.width  = window.innerWidth * 0.95;
+  canvas.height = window.innerHeight * 0.95;
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(1.0, 1.0, 1.0, 1.0);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.enable(gl.DEPTH_TEST);
 
   // Initilize the shaders
@@ -23,6 +25,7 @@ window.onload = function init() {
   // Create buffers
   vBuffer = gl.createBuffer();
   nBuffer = gl.createBuffer();
+  eBuffer = gl.createBuffer();
 
   // Get the ids of shader attributes
   vPositionLoc     = gl.getAttribLocation(program,  "vPosition"   );
@@ -46,11 +49,18 @@ window.onload = function init() {
   gl.enableVertexAttribArray(vNormalLoc);
 
   scene = {
-    transforms: [mat4()],
-    colors: [vec4(0,0,1,1)]
+    transforms: [        mat4(1.0,0,0,5,
+                                0,1,0,2,
+                                0,0,1,0,
+                                0,0,0,1),
+                         mat4(2.0,0,0,5,
+                                0,2,0,0,
+                                0,0,2,10,
+                                0,0,0,1)],
+    colors: [vec4(0,0,1,1), vec4(1,1,1,1)]
   };
 
-  sphereData = processSphere(sphere(20));
+  sphereData = sphere(200);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
@@ -58,13 +68,17 @@ window.onload = function init() {
   gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.norms), gl.STATIC_DRAW);
 
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, eBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
+                    new Uint16Array(flatten(sphereData.tris)), gl.STATIC_DRAW);
+
   eye     = vec3(4.0, 0.0, 0.0)
   at      = vec3(0.0, 0.0, 0.0)
   up      = vec3(0.0, 1.0, 0.0)
   near    = 0.01
   far     = 100
   fovy    = 45
-  aspect  = 1
+  aspect  = canvas.width / canvas.height;
 
   lookAtVector = vec4(subtract(at, eye));
 
@@ -116,9 +130,11 @@ window.onload = function init() {
       fpvRight = normalize(cross(vec3(lookAtVector), up));
       fpvTop = normalize(cross(fpvRight, lookAtVector));
       at = add(at, scale(-event.movementX, fpvRight));
-      at = add(at, scale(-event.movementY, fpvTop));
+      if (Math.abs(dot(vec3(lookAtVector), up)) < 0.75 || true) {
+        at = add(at, scale(-event.movementY, fpvTop));
+      }
     }
-  }, false);
+  }, false); //TODO: ALter this model to use spherical coordinates
 
   // Capture the mouse when the user clicks on the canvas
   canvas.onclick =
@@ -169,7 +185,8 @@ function render() {
 
       gl.uniform4fv(vColorLoc, scene.colors[i]);
 
-      gl.drawArrays(gl.TRIANGLES, 0, sphereData.verts.length);
+      gl.drawElements(gl.TRIANGLES,
+                                sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
 
     }
 

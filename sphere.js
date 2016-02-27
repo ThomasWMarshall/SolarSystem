@@ -26,9 +26,14 @@ function sphere(k) {
       );
     }
   }
+  norms = [];
+  for (var i = 0; i < points.length; i++) {
+    norms.push(vec4(normalize(points[i]), 0.0));
+  }
   return {
     verts : points,
-    tris : tris
+    tris : tris,
+    norms : norms
   }
 }
 
@@ -45,7 +50,7 @@ function processSphere(s) {
         normalize(cross(
         subtract(points[tri[2]], points[tri[0]]),
         subtract(points[tri[1]], points[tri[0]]),
-        false
+        true
       )), 0);
     norms.push(normal);
     norms.push(normal);
