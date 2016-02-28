@@ -81,25 +81,29 @@ window.onload = function init() {
   setUpCameraControls(view, keyDownList);
 
   // Load the scene to be displayed
-  scene = {
-    transforms: [        mat4(1.0,0,0,10,
-                                0,1,0,0,
-                                0,0,1,10,
-                                0,0,0,1),
-                         mat4(0.5,0,0,0,
-                                0,0.5,0,0,
-                                0,0,0.5,0,
-                                0,0,0,1),
-                         mat4(500.0,0,0,0,
-                                0,500,0,0,
-                                0,0,500,0,
-                                0,0,0,1)],
-    colors: [vec4(0,0,1,1), vec4(1,1,1,1), vec4(0,0,0,1)],
-    textureIDs: [0,1,2],
-    ignoreLight : [0,1,1]
-  };
 
-  textures = loadTextures(["textures/earth/Earth.png", "textures/sun/sun.jpg", "textures/skybox/skybox2.png"]);
+  objects = [
+    {
+      transform   : mat4(500.0,0,0,0,0,500,0,0,0,0,500,0,0,0,0,1),
+      color       : vec4(0.,0,0,1),
+      textureURL  : "textures/skybox/skybox2.png",
+      ignoreLight : true
+    },
+    {
+      transform   : mat4(0.5,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0,1),
+      color       : vec4(1.0,1.0,1.0,1.0),
+      textureURL  : "textures/sun/sun.jpg",
+      ignoreLight : true
+    },
+    {
+      transform   : mat4(1.0,0,0,10,0,1,0,0,0,0,1,10,0,0,0,1),
+      color       : vec4(1.0,1.0,1.0,1.0),
+      textureURL  : "textures/earth/Earth.png",
+      ignoreLight : false
+    },
+  ];
+
+  loadObjectTextures();
 
   render();
 }
@@ -116,24 +120,24 @@ function render() {
     gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
     gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
 
-    scene.transforms[2][0][3]  = view.eye[0];
-    scene.transforms[2][1][3]  = view.eye[1];
-    scene.transforms[2][2][3] = view.eye[2];
+    objects[0].transform[0][3]  = view.eye[0];
+    objects[0].transform[1][3]  = view.eye[1];
+    objects[0].transform[2][3]  = view.eye[2];
 
-    for (var i = 0; i < scene.transforms.length; i++) {
+    for (var i = 0; i < objects.length; i++) {
 
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, textures[scene.textureIDs[i]]);
+      gl.bindTexture(gl.TEXTURE_2D, objects[i].texture);
       gl.uniform1i(uSamplerLoc, 0);
 
-      gl.uniform1i(ignoreLightLoc, scene.ignoreLight[i]);
+      gl.uniform1i(ignoreLightLoc, objects[i].ignoreLight);
 
-      var normalMatrix = transpose(inverse(scene.transforms[i]));
+      var normalMatrix = transpose(inverse(objects[i].transform));
 
       gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(normalMatrix));
-      gl.uniformMatrix4fv(transformLoc, false, flatten(scene.transforms[i]));
+      gl.uniformMatrix4fv(transformLoc, false, flatten(objects[i].transform));
 
-      gl.uniform4fv(vColorLoc, scene.colors[i]);
+      gl.uniform4fv(vColorLoc, objects[i].color);
 
       gl.drawElements(gl.TRIANGLES,
                                 sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
@@ -253,26 +257,22 @@ function updateCamera(view) {
   }
 }
 
-function loadTextures(imageFileNames) {
-  var textures = [];
-  for (var i = 0; i < imageFileNames.length; i++) {
-    loadTexture(textures, imageFileNames[i]);
-  }
-  return textures;
+function loadTexture(object) {
+  object.texture = gl.createTexture();
+  object.texture.image = new Image();
+  object.texture.image.onload = function() {
+   gl.bindTexture(gl.TEXTURE_2D, object.texture);
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, object.texture.image);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+   gl.bindTexture(gl.TEXTURE_2D, null);
+  };
+  object.texture.image.crossOrigin = "anonymous";
+  object.texture.image.src = object.textureURL;
 }
 
-function loadTexture(textures, imageSrc) {
-  var texture;
-  texture = gl.createTexture();
-    texture.image = new Image();
-    texture.image.onload = function() {
-     gl.bindTexture(gl.TEXTURE_2D, texture);
-     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-     gl.bindTexture(gl.TEXTURE_2D, null);
-    };
-  texture.image.crossOrigin = "anonymous";
-  texture.image.src = imageSrc;
-  textures.push(texture);
+function loadObjectTextures () {
+  for (var i = 0; i < objects.length; i++) {
+    loadTexture(objects[i]);
+  }
 }
