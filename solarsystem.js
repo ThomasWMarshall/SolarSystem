@@ -32,7 +32,6 @@ window.onload = function init() {
   vNormalLoc       = gl.getAttribLocation(program,  "vNormal"     );
 
   // Get the ids of shader uniforms
-  //lookVectorLoc    = gl.getUniformLocation(program, "lookVector"  );
   pMatrixLoc       = gl.getUniformLocation(program, "pMatrix"     );
   mvMatrixLoc      = gl.getUniformLocation(program, "mvMatrix"    );
   transformLoc     = gl.getUniformLocation(program, "transform"   );
@@ -48,6 +47,34 @@ window.onload = function init() {
   gl.vertexAttribPointer(vNormalLoc, 4, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vNormalLoc);
 
+  // Load the constant sphere data into the shaders
+  sphereData = sphere(50);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.norms), gl.STATIC_DRAW);
+
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, eBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
+                    new Uint16Array(flatten(sphereData.tris)), gl.STATIC_DRAW);
+
+
+  // Set up the camera and its controls
+  eye     = vec3(4.0, 0.0, 0.0)
+  at      = vec3(0.0, 0.0, 0.0)
+  up      = vec3(0.0, 1.0, 0.0)
+  near    = 0.01
+  far     = 100
+  fovy    = 45
+  aspect  = canvas.width / canvas.height;
+
+  lookVector = subtract(at, eye);
+
+  setUpCameraControls();
+
+  // Load the scene to be displayed
   scene = {
     transforms: [        mat4(1.0,0,0,5,
                                 0,1,0,2,
@@ -60,27 +87,40 @@ window.onload = function init() {
     colors: [vec4(0,0,1,1), vec4(1,1,1,1)]
   };
 
-  sphereData = sphere(200);
+  render();
+}
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
+function render() {
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.norms), gl.STATIC_DRAW);
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, eBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-                    new Uint16Array(flatten(sphereData.tris)), gl.STATIC_DRAW);
+    updateCamera();
 
-  eye     = vec3(4.0, 0.0, 0.0)
-  at      = vec3(0.0, 0.0, 0.0)
-  up      = vec3(0.0, 1.0, 0.0)
-  near    = 0.01
-  far     = 100
-  fovy    = 45
-  aspect  = canvas.width / canvas.height;
+    mvMatrix    = lookAt(eye, at, up);
+    pMatrix     = perspective(fovy, aspect, near, far);
+    lookVector  = normalize(subtract(eye,at));
 
-  lookVector = subtract(at, eye);
+    gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
+    gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
+
+    for (var i = 0; i < scene.transforms.length; i++) {
+
+      var normalMatrix = transpose(inverse(scene.transforms[i]));
+
+      gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(normalMatrix));
+      gl.uniformMatrix4fv(transformLoc, false, flatten(scene.transforms[i]));
+
+      gl.uniform4fv(vColorLoc, scene.colors[i]);
+
+      gl.drawElements(gl.TRIANGLES,
+                                sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
+
+    }
+
+    requestAnimFrame(render);
+}
+
+function setUpCameraControls() {
 
   keyDownList = {
     forward: false,
@@ -141,55 +181,26 @@ window.onload = function init() {
     document.body.requestPointerLock    ||
     document.body.mozRequestPointerLock ||
     document.body.webkitRequestPointerLock;
-
-  render();
 }
 
-function render() {
+function updateCamera() {
 
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  var movementSpeed = 0.2;
 
-    movementSpeed = 0.2;
-
-    if (keyDownList.back == true) {
-      eye = add(eye, scale(movementSpeed, lookVector));
-      at  = add(at,  scale(movementSpeed, lookVector));
-    }
-    if (keyDownList.forward == true) {
-      eye = subtract(eye, scale(movementSpeed, lookVector));
-      at  = subtract(at,  scale(movementSpeed, lookVector));
-    }
-    if (keyDownList.left == true) {
-      eye = add(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
-      at  = add(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
-    }
-    if (keyDownList.right == true) {
-      eye = subtract(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
-      at  = subtract(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
-    }
-
-    mvMatrix    = lookAt(eye, at, up);
-    pMatrix     = perspective(fovy, aspect, near, far);
-    lookVector  = normalize(subtract(eye,at));
-
-    //gl.uniform4fv(lookVectorLoc, lookVector);
-
-    gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
-    gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
-
-    for (var i = 0; i < scene.transforms.length; i++) {
-
-      var normalMatrix = transpose(inverse(scene.transforms[i]));
-
-      gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(normalMatrix));
-      gl.uniformMatrix4fv(transformLoc, false, flatten(scene.transforms[i]));
-
-      gl.uniform4fv(vColorLoc, scene.colors[i]);
-
-      gl.drawElements(gl.TRIANGLES,
-                                sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
-
-    }
-
-    requestAnimFrame(render);
+  if (keyDownList.back == true) {
+    eye = add(eye, scale(movementSpeed, lookVector));
+    at  = add(at,  scale(movementSpeed, lookVector));
+  }
+  if (keyDownList.forward == true) {
+    eye = subtract(eye, scale(movementSpeed, lookVector));
+    at  = subtract(at,  scale(movementSpeed, lookVector));
+  }
+  if (keyDownList.left == true) {
+    eye = add(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
+    at  = add(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
+  }
+  if (keyDownList.right == true) {
+    eye = subtract(eye, scale(movementSpeed, normalize(cross(lookVector, up))));
+    at  = subtract(at,  scale(movementSpeed, normalize(cross(lookVector, up))));
+  }
 }
