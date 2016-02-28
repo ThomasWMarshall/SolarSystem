@@ -56,7 +56,7 @@ window.onload = function init() {
   gl.enableVertexAttribArray(texCoordInLoc);
 
   // Load the constant sphere data into the shaders
-  sphereData = sphere(200);
+  sphereData = sphere(35);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
@@ -82,24 +82,24 @@ window.onload = function init() {
 
   // Load the scene to be displayed
   scene = {
-    transforms: [        mat4(1.0,0,0,5,
-                                0,1,0,2,
-                                0,0,1,0,
+    transforms: [        mat4(1.0,0,0,10,
+                                0,1,0,0,
+                                0,0,1,10,
                                 0,0,0,1),
-                         mat4(2.0,0,0,5,
-                                0,2,0,0,
-                                0,0,2,10,
+                         mat4(0.5,0,0,0,
+                                0,0.5,0,0,
+                                0,0,0.5,0,
                                 0,0,0,1),
-                         mat4(50.0,0,0,0,
-                                0,50,0,0,
-                                0,0,50,0,
+                         mat4(500.0,0,0,0,
+                                0,500,0,0,
+                                0,0,500,0,
                                 0,0,0,1)],
     colors: [vec4(0,0,1,1), vec4(1,1,1,1), vec4(0,0,0,1)],
-    textureIDs: [0,0,0],
-    ignoreLight : [0,0,1]
+    textureIDs: [0,1,2],
+    ignoreLight : [0,1,1]
   };
 
-  textures = loadTextures(["textures/earth/Earth.png"]);
+  textures = loadTextures(["textures/earth/Earth.png", "textures/sun/sun.jpg", "textures/skybox/skybox2.png"]);
 
   render();
 }
@@ -115,6 +115,10 @@ function render() {
 
     gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
     gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
+
+    scene.transforms[2][0][3]  = view.eye[0];
+    scene.transforms[2][1][3]  = view.eye[1];
+    scene.transforms[2][2][3] = view.eye[2];
 
     for (var i = 0; i < scene.transforms.length; i++) {
 
@@ -145,7 +149,7 @@ function setUpCamera () {
     at      : vec3(0.0, 0.0, 0.0),
     up      : vec3(0.0, 1.0, 0.0),
     near    : 0.01,
-    far     : 100,
+    far     : 1000,
     fovy    : 45,
     aspect  : canvas.width / canvas.height,
 
@@ -252,19 +256,23 @@ function updateCamera(view) {
 function loadTextures(imageFileNames) {
   var textures = [];
   for (var i = 0; i < imageFileNames.length; i++) {
-    var texture;
-    texture = gl.createTexture();
-    texture.image = new Image();
-    texture.image.onload = function() {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-    }
-    texture.image.crossOrigin = "anonymous";
-    texture.image.src = imageFileNames[i];
-    textures.push(texture);
+    loadTexture(textures, imageFileNames[i]);
   }
   return textures;
+}
+
+function loadTexture(textures, imageSrc) {
+  var texture;
+  texture = gl.createTexture();
+    texture.image = new Image();
+    texture.image.onload = function() {
+     gl.bindTexture(gl.TEXTURE_2D, texture);
+     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+     gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+  texture.image.crossOrigin = "anonymous";
+  texture.image.src = imageSrc;
+  textures.push(texture);
 }
