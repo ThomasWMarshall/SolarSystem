@@ -183,6 +183,8 @@ canvas {
   uniform sampler2D noiseSampler;
   uniform float aspect;
 
+  uniform float brightness;
+
   uniform mat4 pMatrix;
   uniform mat4 mvMatrix;
 
@@ -223,7 +225,7 @@ canvas {
 
     float alpha = length(color);
 
-    color -= vec3(length(uvd) * 0.02);
+    color -= vec3(length(uvd) * 0.05);
 
     if (mainPos.x > 1.0) {color *= 0.0;}
     if (mainPos.x < -1.0) {color *= 0.0;}
@@ -232,6 +234,8 @@ canvas {
     if (mainPos.y < -1.0) {color *= 0.0;}
 
     if (rawPos.z > 1.0) {color *= 0.0;}
+
+    color *= brightness;
 
     gl_FragColor = vec4(vec3(1.0, 1.25, 1.7) * color,alpha);
     }

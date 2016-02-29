@@ -67,7 +67,8 @@ window.onload = function init() {
 
     pMatrixLoc      : gl.getUniformLocation(lensProgram, "pMatrix"        ),
     mvMatrixLoc     : gl.getUniformLocation(lensProgram, "mvMatrix"       ),
-    aspectLoc       : gl.getUniformLocation(lensProgram, "aspect"         )
+    aspectLoc       : gl.getUniformLocation(lensProgram, "aspect"         ),
+    brightnessLoc   : gl.getUniformLocation(lensProgram, "brightness"     )
   };
 
   // Load the constant sphere and square data into the shaders
@@ -112,17 +113,13 @@ window.onload = function init() {
       ignoreLight : true
     },
     {
-      transform   : mat4(0.5,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0,1),
-      color       : vec4(1.0,1.0,1.0,1.0),
-      textureURL  : "textures/sun/sun.jpg",
-      ignoreLight : true
-    },
-    {
       transform   : mat4(1.0,0,0,10,0,1,0,0,0,0,1,10,0,0,0,1),
       color       : vec4(1.0,1.0,1.0,1.0),
       textureURL  : "textures/earth/Earth.png",
-      ignoreLight : false
-    },
+      ignoreLight : false,
+      radius      : 1.0,
+      pos         : vec3(10.0,0.0,10.0)
+    }
   ];
 
   loadObjectTextures();
@@ -243,6 +240,18 @@ function render() {
 
     // Run the mixer to sum the results
 
+    var brightness = 1.0;
+    for (var i = 0; i < objects.length; i++) {
+      if (!objects[i].ignoreLight) {
+        var dist = pointLineDistance(objects[i].pos, view.eye, vec3(0.0,0.0,0.0));
+        if (dist <= objects[i].radius &&
+            length(subtract(view.eye, objects[i].pos))  < length(view.eye) &&
+            dot(subtract(view.eye, objects[i].pos), subtract(vec3(0.0,0.0,0.0), view.eye)) < 0.0) {
+          brightness = 0.0;
+        }
+      }
+    }
+
 
     gl.useProgram(lensProgram);
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
@@ -257,6 +266,7 @@ function render() {
 
     gl.uniformMatrix4fv(lens.pMatrixLoc, false, flatten(pMatrix));
     gl.uniformMatrix4fv(lens.mvMatrixLoc, false, flatten(mvMatrix));
+    gl.uniform1f(lens.brightnessLoc, brightness);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
@@ -371,7 +381,7 @@ function setUpCameraControls() {
 
 function updateCamera(view) {
 
-  var movementSpeed = 0.2;
+  var movementSpeed = 0.05;
 
   if (keyDownList.forward == true) {
     view.eye = add(view.eye, scale(movementSpeed, view.lookVector));
@@ -443,4 +453,8 @@ function switchToSceneProgram() {
   linkBufferAttrib(texCoordInLoc, texCoordBufferSphere, 2);
   linkBufferAttrib(vNormalLoc, nBuffer, 4);
   gl.useProgram(sceneProgram);
+}
+
+function pointLineDistance(x0, x1, x2) {
+  return(length(cross(subtract(x0,x1),subtract(x0,x2)))/length(subtract(x2,x1)));
 }
