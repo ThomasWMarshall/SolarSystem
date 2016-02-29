@@ -19,59 +19,81 @@ window.onload = function init() {
   gl.enable(gl.DEPTH_TEST);
 
   // Initilize the shaders
-  program = initShaders(gl, "vertex-shader", "fragment-shader");
-  gl.useProgram(program)
+  sceneProgram = initShaders(gl, "scene-vertex-shader", "scene-fragment-shader");
+  textureProgram = initShaders(gl, "texture-vertex-shader", "texture-fragment-shader");
+  brightnessProgram = initShaders(gl, "texture-vertex-shader", "brightness-fragment-shader");
+  blurProgram = initShaders(gl, "texture-vertex-shader", "blur-fragment-shader");
+  mixerProgram = initShaders(gl, "texture-vertex-shader", "mixer-fragment-shader");
+  lensProgram = initShaders(gl, "texture-vertex-shader", "lens-fragment-shader");
 
   // Create buffers
-  vBuffer = gl.createBuffer();
-  nBuffer = gl.createBuffer();
-  eBuffer = gl.createBuffer();
-  texCoordBuffer = gl.createBuffer();
+  vBufferSphere         = gl.createBuffer();
+  nBuffer               = gl.createBuffer();
+  eBuffer               = gl.createBuffer();
+  texCoordBufferSphere  = gl.createBuffer();
+
+  vBufferSquare         = gl.createBuffer();
+  texCoordBufferSquare  = gl.createBuffer();
 
   // Get the ids of shader attributes
-  vPositionLoc     = gl.getAttribLocation(program,  "vPosition"   );
-  vNormalLoc       = gl.getAttribLocation(program,  "vNormal"     );
-  texCoordInLoc    = gl.getAttribLocation(program,  "texCoordIn"  );
+  vPositionLoc     = gl.getAttribLocation(sceneProgram,  "vPosition"   );
+  vNormalLoc       = gl.getAttribLocation(sceneProgram,  "vNormal"     );
+  texCoordInLoc    = gl.getAttribLocation(sceneProgram,  "texCoordIn"  );
 
   // Get the ids of shader uniforms
-  pMatrixLoc       = gl.getUniformLocation(program, "pMatrix"      );
-  mvMatrixLoc      = gl.getUniformLocation(program, "mvMatrix"     );
-  transformLoc     = gl.getUniformLocation(program, "transform"    );
-  normalMatrixLoc  = gl.getUniformLocation(program, "normalMatrix" );
-  vColorLoc        = gl.getUniformLocation(program, "vColor"       );
-  uSamplerLoc      = gl.getUniformLocation(program, "uSampler"     );
-  ignoreLightLoc = gl.getUniformLocation(program, "ignoreLightIn");
+  pMatrixLoc       = gl.getUniformLocation(sceneProgram, "pMatrix"      );
+  mvMatrixLoc      = gl.getUniformLocation(sceneProgram, "mvMatrix"     );
+  transformLoc     = gl.getUniformLocation(sceneProgram, "transform"    );
+  vColorLoc        = gl.getUniformLocation(sceneProgram, "vColor"       );
+  uSamplerLoc      = gl.getUniformLocation(sceneProgram, "uSampler"     );
+  ignoreLightLoc   = gl.getUniformLocation(sceneProgram, "ignoreLightIn");
 
-  // Link the buffers to their corresponding js representations
-  gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-  gl.vertexAttribPointer(vPositionLoc, 4, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(vPositionLoc);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
-  gl.vertexAttribPointer(vNormalLoc, 4, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(vNormalLoc);
+  texVPositionLoc  = gl.getAttribLocation(textureProgram,  "vPosition"  );
+  texTexCoordInLoc = gl.getAttribLocation(textureProgram,  "texCoordIn" );
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.vertexAttribPointer(texCoordInLoc, 2, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(texCoordInLoc);
+  texUSamplerLoc   = gl.getUniformLocation(textureProgram, "texUSampler"   );
 
-  // Load the constant sphere data into the shaders
+  brightTexUSamplerLoc = gl.getUniformLocation(brightnessProgram, "brightTexUSampler"   );
+
+  texUSampler1Loc = gl.getUniformLocation(mixerProgram, "texUSampler1"   );
+  texUSampler2Loc = gl.getUniformLocation(mixerProgram, "texUSampler2"   );
+
+  imageSizeLoc = gl.getUniformLocation(blurProgram, "imageSize"   );
+  horizontalLoc = gl.getUniformLocation(blurProgram, "horizontal"   );
+
+  lens = {
+    noiseSamplerLoc : gl.getUniformLocation(lensProgram, "noiseSampler"   ),
+
+    pMatrixLoc      : gl.getUniformLocation(lensProgram, "pMatrix"        ),
+    mvMatrixLoc     : gl.getUniformLocation(lensProgram, "mvMatrix"       ),
+    aspectLoc       : gl.getUniformLocation(lensProgram, "aspect"         )
+  };
+
+  // Load the constant sphere and square data into the shaders
   sphereData = sphere(35);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, vBufferSphere);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.verts), gl.STATIC_DRAW);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, nBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.norms), gl.STATIC_DRAW);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBufferSphere);
   gl.bufferData(gl.ARRAY_BUFFER, flatten(sphereData.texCoords), gl.STATIC_DRAW);
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, eBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-                    new Uint16Array(flatten(sphereData.tris)), gl.STATIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(flatten(sphereData.tris)), gl.STATIC_DRAW);
 
+  squareData = square();
 
+  gl.bindBuffer(gl.ARRAY_BUFFER, vBufferSquare);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(squareData.verts), gl.STATIC_DRAW);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBufferSquare);
+  gl.bufferData(gl.ARRAY_BUFFER, flatten(squareData.texCoords), gl.STATIC_DRAW);
+
+  
   // Set up the camera and its controls
 
   keyDownList = {};
@@ -105,11 +127,49 @@ window.onload = function init() {
 
   loadObjectTextures();
 
+  noise = {};
+  loadTexture(noise, "textures/noise/noise.png");
+
+  framebuffers = [];
+  frameTextures = [];
+  renderbuffers = [];
+
+  for (var i = 0; i < 3; i ++) {
+    var tex = makeTexture();
+    frameTextures.push(tex);
+
+    // make the texture the same size as the image
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+ 
+    var framebuffer = gl.createFramebuffer();
+    framebuffers.push(framebuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+ 
+    // Attach a texture to it.
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+    // Create a depth buffer
+    var renderbuffer = gl.createRenderbuffer();
+    renderbuffers.push(renderbuffers);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, canvas.width, canvas.height);
+
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
   render();
 }
 
 function render() {
 
+    switchToSceneProgram();
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     updateCamera(view);
@@ -120,31 +180,105 @@ function render() {
     gl.uniformMatrix4fv(pMatrixLoc , false, flatten(pMatrix));
     gl.uniformMatrix4fv(mvMatrixLoc, false, flatten(mvMatrix));
 
+    // Make the skybox follow the viewer to eliminate paralax effects
     objects[0].transform[0][3]  = view.eye[0];
     objects[0].transform[1][3]  = view.eye[1];
     objects[0].transform[2][3]  = view.eye[2];
 
     for (var i = 0; i < objects.length; i++) {
 
+      // Bind a texture and load it
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, objects[i].texture);
       gl.uniform1i(uSamplerLoc, 0);
 
       gl.uniform1i(ignoreLightLoc, objects[i].ignoreLight);
 
-      var normalMatrix = transpose(inverse(objects[i].transform));
-
-      gl.uniformMatrix4fv(normalMatrixLoc, false, flatten(normalMatrix));
       gl.uniformMatrix4fv(transformLoc, false, flatten(objects[i].transform));
 
       gl.uniform4fv(vColorLoc, objects[i].color);
 
-      gl.drawElements(gl.TRIANGLES,
-                                sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(gl.TRIANGLES, sphereData.tris.length*3, gl.UNSIGNED_SHORT, 0);
 
     }
 
+    // Render just the brightest portions of the image
+
+    switchToTextureProgram();
+    // gl.useProgram(brightnessProgram);
+
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+    // gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // gl.activeTexture(gl.TEXTURE0);
+    // gl.bindTexture(gl.TEXTURE_2D, frameTextures[0]);
+    // gl.uniform1i(brightTexUSamplerLoc, 0);
+
+    // gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+
+    // // Run the blur program twice
+
+    // gl.useProgram(blurProgram);
+    // gl.uniform2f(imageSizeLoc, canvas.width, canvas.height);
+
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[2]);
+    // gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // gl.activeTexture(gl.TEXTURE0);
+    // gl.bindTexture(gl.TEXTURE_2D, frameTextures[0]);
+    // gl.uniform1i(brightTexUSamplerLoc, 0);
+    // gl.uniform1i(horizontalLoc, true);
+
+    // gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+    // gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // gl.activeTexture(gl.TEXTURE0);
+    // gl.bindTexture(gl.TEXTURE_2D, frameTextures[2]);
+    // gl.uniform1i(brightTexUSamplerLoc, 0);
+    // gl.uniform1i(horizontalLoc, false);
+
+    // gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+
+    // Run the mixer to sum the results
+
+
+    gl.useProgram(lensProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, noise.texture);
+
+    gl.uniform1f(lens.aspectLoc, canvas.height / canvas.width);
+    gl.uniform1i(lens.noiseSamplerLoc, 0);
+
+    gl.uniformMatrix4fv(lens.pMatrixLoc, false, flatten(pMatrix));
+    gl.uniformMatrix4fv(lens.mvMatrixLoc, false, flatten(mvMatrix));
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+
+
+    gl.useProgram(mixerProgram);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, frameTextures[1]);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, frameTextures[0]);
+    gl.uniform1i(texUSampler1Loc, 0);
+    gl.uniform1i(texUSampler2Loc, 1);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+
     requestAnimFrame(render);
+
+
 }
 
 function setUpCamera () {
@@ -257,22 +391,56 @@ function updateCamera(view) {
   }
 }
 
-function loadTexture(object) {
-  object.texture = gl.createTexture();
+function loadTexture(object, url) {
+  object.texture = makeTexture();
   object.texture.image = new Image();
-  object.texture.image.onload = function() {
-   gl.bindTexture(gl.TEXTURE_2D, object.texture);
-   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, object.texture.image);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-   gl.bindTexture(gl.TEXTURE_2D, null);
-  };
+
   object.texture.image.crossOrigin = "anonymous";
-  object.texture.image.src = object.textureURL;
+  object.texture.image.src = url;
+  
+  object.texture.image.onload = function() {
+   linkTexture(object.texture, object.texture.image)
+  };
+}
+
+function makeTexture() {
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return texture;
+}
+
+function linkTexture(texture, image) {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 function loadObjectTextures () {
   for (var i = 0; i < objects.length; i++) {
-    loadTexture(objects[i]);
+    loadTexture(objects[i], objects[i].textureURL);
   }
+}
+
+function linkBufferAttrib(attribLoc, buffer, vecsize) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.vertexAttribPointer(attribLoc, vecsize, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(attribLoc);
+}
+
+function switchToTextureProgram() {
+  linkBufferAttrib(texVPositionLoc, vBufferSquare, 4);
+  linkBufferAttrib(texTexCoordInLoc, texCoordBufferSquare, 2);
+  gl.useProgram(textureProgram);
+}
+
+function switchToSceneProgram() {
+  linkBufferAttrib(vPositionLoc, vBufferSphere, 4);
+  linkBufferAttrib(texCoordInLoc, texCoordBufferSphere, 2);
+  linkBufferAttrib(vNormalLoc, nBuffer, 4);
+  gl.useProgram(sceneProgram);
 }

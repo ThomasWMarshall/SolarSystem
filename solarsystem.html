@@ -14,28 +14,27 @@ canvas {
 </style>
 <head>
   <title>Solar System</title>
-  <script id = "vertex-shader" type = "x-shader/x-vertex">
+
+
+  <script id = "scene-vertex-shader" type = "x-shader/x-vertex">
 
   attribute vec4 vPosition;
-  attribute vec4 vNormal;
   attribute vec2 texCoordIn;
+  attribute vec4 vNormal;
 
   uniform mat4 pMatrix;
   uniform mat4 mvMatrix;
   uniform mat4 transform;
 
-  // Now take the normal matrix as computed by the CPU
-  uniform mat4 normalMatrix;
-
   uniform bool ignoreLightIn;
 
-  varying vec3 toLight;
   varying vec3 norm;
+  varying vec3 toLight;
   varying vec2 texCoord;
   varying float ignoreLight;
 
   void main() {
-    norm = normalize(mat3(normalMatrix) * vec3(vNormal));
+    norm = normalize(vec3(vNormal));
     toLight = normalize((transform * vec4(0.,0,0,-1)).xyz);
     gl_Position = pMatrix * mvMatrix * transform * vPosition;
     texCoord = texCoordIn;
@@ -44,30 +43,206 @@ canvas {
 
   </script>
 
-  <script id = "fragment-shader" type = "x-shader/x-fragment">
+
+  <script id = "scene-fragment-shader" type = "x-shader/x-fragment">
 
   precision highp float;
+
   varying vec3 norm;
   varying vec3 toLight;
   varying vec2 texCoord;
   varying float ignoreLight;
 
-  uniform vec4 vColor;
   uniform sampler2D uSampler;
+  uniform vec4 vColor;
 
   void main() {
     float multiplier = (dot(toLight, norm) >= 0.0) ? pow(dot(toLight, norm),1.25): 0.0;
     if (ignoreLight > 0.5) {multiplier = 1.0;}
-    gl_FragColor = vec4((multiplier * texture2D(uSampler, vec2(texCoord.x, texCoord.y))).xyz, 1.0);
+    gl_FragColor = vec4((multiplier * texture2D(uSampler, texCoord)).xyz, 1.0);
   }
 
   </script>
 
+  <script id = "texture-vertex-shader" type = "x-shader/x-vertex">
+
+  attribute vec4 vPosition;
+  attribute vec2 texCoordIn;
+
+  varying vec2 texCoord;
+
+  void main() {
+    gl_Position = vPosition;
+    texCoord = texCoordIn;
+  }
+
+  </script>
+
+  <script id = "texture-fragment-shader" type = "x-shader/x-fragment">
+
+  precision highp float;
+
+  varying vec2 texCoord;
+
+  uniform sampler2D texUSampler;
+
+  void main() {
+    gl_FragColor = texture2D(texUSampler, texCoord);
+  }
+
+  </script>
+
+  <script id = "brightness-fragment-shader" type = "x-shader/x-fragment">
+
+  precision highp float;
+
+  varying vec2 texCoord;
+
+  uniform sampler2D texUSampler;
+
+  void main() {
+    vec3 color = texture2D(texUSampler, texCoord).rgb;
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    if (dot(color, vec3(1.0,1.0,1.0)) > 1.5) {gl_FragColor = vec4(color, 1.0);}
+  }
+
+  </script>
+
+  <script id = "blur-fragment-shader" type = "x-shader/x-fragment">
+
+  precision highp float;
+
+  varying vec2 texCoord;
+
+  uniform sampler2D texUSampler;
+  uniform vec2 imageSize;
+  //uniform float weights[5];
+  uniform bool horizontal;
+
+  void main() {
+
+    vec2 onePixel = vec2(1.0, 1.0) / imageSize;
+    float weights[20];
+
+    weights[0] = 1.0;
+    weights[1] = 1.0;
+    weights[2] = 1.0;
+    weights[3] = 0.5;
+    weights[4] = 0.2;
+
+    float sum = weights[0];
+    vec4 color = texture2D(texUSampler, texCoord) * weights[0];
+
+    if (horizontal) {
+
+      for (int i = 1; i < 5; i++) {
+        color += texture2D(texUSampler, texCoord + onePixel * vec2(5*i,  0)) * weights[i];
+        color += texture2D(texUSampler, texCoord - onePixel * vec2(5*i,  0)) * weights[i];
+        sum += 2.0 * weights[i];
+      }
+
+    } else {
+
+      for (int i = 1; i < 5; i++) {
+        color += texture2D(texUSampler, texCoord + onePixel * vec2(0,  5*i)) * weights[i];
+        color += texture2D(texUSampler, texCoord - onePixel * vec2(0,  5*i)) * weights[i];
+        sum += 2.0 * weights[i];
+      }
+
+    }
+
+    if (sum == 0.0) {sum = 1.0;}
+
+    gl_FragColor = vec4(color.rgb / sum, 1.0);
+  }
+
+  </script>
+
+  <script id = "mixer-fragment-shader" type = "x-shader/x-fragment">
+
+  precision highp float;
+
+  varying vec2 texCoord;
+
+  uniform sampler2D texUSampler1;
+  uniform sampler2D texUSampler2;
+
+  void main() {
+    gl_FragColor = vec4(texture2D(texUSampler1, texCoord).rgb + 
+                        texture2D(texUSampler2, texCoord).rgb, 1.0);
+  }
+
+  </script>
+
+  <script id = "lens-fragment-shader" type = "x-shader/x-fragment">
+
+  precision highp float;
+
+  varying vec2 texCoord;
+
+  uniform sampler2D noiseSampler;
+  uniform float aspect;
+
+  uniform mat4 pMatrix;
+  uniform mat4 mvMatrix;
+
+  void main() {
+    const float PI = 3.141592653589793238462643383;
+
+    vec4 rawPos = (pMatrix * mvMatrix * vec4(0.0,0.0,0.0,1.0)) / (pMatrix * mvMatrix * vec4(0.0,0.0,0.0,1.0)).w;
+
+    vec2 mainPos = rawPos.xy;
+
+    vec2 uv = (texCoord  - vec2(0.5,0.5)) * 2.0;
+    //uv.y *= aspect;
+    vec2 uvd = uv  * length(uv);
+    
+    vec2 mainVector = uv-mainPos;
+    float angle = atan(mainVector.x, mainVector.y) + PI;
+    float n = texture2D(noiseSampler, vec2(angle / (2.0*PI) / 8.0 + (mainPos.x + mainPos.y) / 128.0) + vec2(1.0,1.0)/128.0).x;
+
+    vec3 color = vec3(0.1/pow(length(mainVector),0.7));
+
+    color += color * (sin(n * 8.0) / 20.0 + 0.5 + n * 0.25);
+
+
+    //color += max(0.1/pow(mainPos.y - uv.y,0.6)*(1.0-0.1*pow(mainPos.x - uv.x,2.0)), 0.0);
+
+    vec2 uvx = mix(uv, uvd, -0.5);
+    color += max(0.0,0.01-pow(length(uvx+0.2*mainPos),1.9))*7.0;
+    color += max(0.0,0.01-pow(length(uvx+0.3*mainPos),1.9))*10.0;
+
+    color += max(0.0,0.01-pow(length(uvx+1.4*mainPos),1.2))*15.0;
+    color += max(0.0,0.01-pow(length(uvx+1.5*mainPos),1.4))*10.0;
+
+    color += max(0.0,0.01-pow(length(uvx-0.7*mainPos),2.3))*10.0;
+    color += max(0.0,0.01-pow(length(uvx-0.6*mainPos),2.0))*10.0;
+
+    color += max(0.0,0.01-pow(length(uvx+2.5*mainPos),1.9))*4.0;
+    color += max(0.0,0.01-pow(length(uvx+3.5*mainPos),1.9))*2.0;
+
+    float alpha = length(color);
+
+    color -= vec3(length(uvd) * 0.02);
+
+    if (mainPos.x > 1.0) {color *= 0.0;}
+    if (mainPos.x < -1.0) {color *= 0.0;}
+
+    if (mainPos.y > 1.0) {color *= 0.0;}
+    if (mainPos.y < -1.0) {color *= 0.0;}
+
+    if (rawPos.z > 1.0) {color *= 0.0;}
+
+    gl_FragColor = vec4(vec3(1.0, 1.25, 1.7) * color,alpha);
+    }
+
+  </script>
 
   <script type="text/javascript" src="../Common/webgl-utils.js"></script>
   <script type="text/javascript" src="../Common/initShaders.js"></script>
   <script type="text/javascript" src="../Common/MV.js"></script>
   <script type="text/javascript" src="sphere.js"></script>
+  <script type="text/javascript" src="square.js"></script>
   <script type="text/javascript" src="solarsystem.js"></script>
 
 </head>
