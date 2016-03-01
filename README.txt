@@ -34,12 +34,9 @@ The texturing is done using standard WebGL/GLSL tools by taking a texture
 coordinate from the shape and using that to look up the color to draw at any
 given point on the object [0][1]. The texture itself is rendered to by a
 separate GLSL program, which is in turn rendered onto the surface of the
-object in question [2].
-
-Bloom (the light "glow") is drawn on top of the existing canvas image by yet
-another shader program that calculates and draws blur over the necessary light
-source [3]. Similarly, lens flare is its own fragment shader, which draws light
-over the scene [4][5].
+object in question [2]. The star is a point light source with its own shaders
+that calculate bloom, and lens flare to be drawn over the existing
+image [3][4][5].
 
 Navigation is implemented by capturing both mouse movement and keypress events
 on the canvas and using these to recalculate the camera position and camera
