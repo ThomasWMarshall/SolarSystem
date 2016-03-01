@@ -59,9 +59,7 @@ WORKS CITED
   http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
 [3] de Vries, Joey. "Advanced Lighting: Bloom". In "Learn OpenGL", online at
   http://www.learnopengl.com/#!Advanced-Lighting/Bloom
-[4] loswl1. "3D Composition using Xara 3D and Photoshop", online at
-  http://www.inspiks.com/create-an-exciting-3d-composition-using-xara-3d-and-photoshop/
-[5] musk. "Musk's Lens Flare", online at
+[4] musk. "Musk's Lens Flare", online at
   https://www.shadertoy.com/view/4sX3Rs#
 
 RESOURCES
