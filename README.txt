@@ -44,6 +44,11 @@ transforms for the scene, which are then passed into the scene's shader
 programs. These are recalculated each frame, which gives an illusion of smooth
 motion/animation throughout the scene.
 
+The rendering of the light source is achieved by compositing the output of a
+specalized shader written to generate the star with the output of the standard
+perspective rendering shader by rdrawing both images to framebuffers and
+sending both through a final shader that mixes the two together.
+
 WORKS CITED
 
 [0] Greggman. "Image Processing". In "WebGL Fundamentals", online at
