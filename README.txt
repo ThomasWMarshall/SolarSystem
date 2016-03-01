@@ -30,6 +30,9 @@ smooth-shaded in a deferred shading process. The camera in this project can be
 moved using the mouse and the WASD keys to change the scene perspective.
 Finally, the sun's light has both dithered bloom and lens flare.
 
+Note: In order to use the mouse for navigation, you must first click on the
+canvas to lock it. To unlock the curser, press esc.
+
 The texturing is done using standard WebGL/GLSL tools by taking a texture
 coordinate from the shape and using that to look up the color to draw at any
 given point on the object [0][1]. The texture itself is rendered to by a
