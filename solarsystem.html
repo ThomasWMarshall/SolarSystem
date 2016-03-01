@@ -15,7 +15,16 @@ canvas {
 <head>
   <title>Solar System</title>
 
-
+  <!--
+    The scene vertex shader has the interesting job of implementing the
+    specalized lighting model we are using, that treats point sources of finite
+    distances as infinitely far away. It achieves this by forcing the
+    calculation of the toLight vector to be calculated as the vector from the
+    light source to the center of the current object as opposed to the position
+    of the current vertex. Otherwise, this shader just takes care of things to 
+    do with perspective rendring including passing texture coordinates on to
+    the fragment shaders.
+  -->
   <script id = "scene-vertex-shader" type = "x-shader/x-vertex">
 
   attribute vec4 vPosition;
@@ -43,7 +52,13 @@ canvas {
 
   </script>
 
-
+  <!--
+    The scene fragment shader takes interpolated normals from the scene vertex
+    shader in order to achieve Phong shading. We multiply the value of the
+    texture at a given point by a power of the cos of the angle between the
+    vector to the light source and the normal vector. This achieves a visually
+    pleasing lighting model.
+  -->
   <script id = "scene-fragment-shader" type = "x-shader/x-fragment">
 
   precision highp float;
@@ -64,6 +79,11 @@ canvas {
 
   </script>
 
+  <!--
+    Arguably the simplest shader here, the texture vertex shader passes the
+    verticies of a single quad onto the fragment shaders along with texture
+    coordinates.
+  -->
   <script id = "texture-vertex-shader" type = "x-shader/x-vertex">
 
   attribute vec4 vPosition;
@@ -78,101 +98,65 @@ canvas {
 
   </script>
 
+  <!--
+    This is the texture fragment shader. It simply renders a texture to the
+    screen as a single textured quad by sampling the texture at each point.
+  -->
   <script id = "texture-fragment-shader" type = "x-shader/x-fragment">
 
   precision highp float;
 
   varying vec2 texCoord;
 
-  uniform sampler2D texUSampler;
+  uniform sampler2D uSampler;
 
   void main() {
-    gl_FragColor = texture2D(texUSampler, texCoord);
+    gl_FragColor = texture2D(uSampler, texCoord);
   }
 
   </script>
 
-  <script id = "brightness-fragment-shader" type = "x-shader/x-fragment">
-
-  precision highp float;
-
-  varying vec2 texCoord;
-
-  uniform sampler2D texUSampler;
-
-  void main() {
-    vec3 color = texture2D(texUSampler, texCoord).rgb;
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    if (dot(color, vec3(1.0,1.0,1.0)) > 1.5) {gl_FragColor = vec4(color, 1.0);}
-  }
-
-  </script>
-
-  <script id = "blur-fragment-shader" type = "x-shader/x-fragment">
-
-  precision highp float;
-
-  varying vec2 texCoord;
-
-  uniform sampler2D texUSampler;
-  uniform vec2 imageSize;
-  //uniform float weights[5];
-  uniform bool horizontal;
-
-  void main() {
-
-    vec2 onePixel = vec2(1.0, 1.0) / imageSize;
-    float weights[20];
-
-    weights[0] = 1.0;
-    weights[1] = 1.0;
-    weights[2] = 1.0;
-    weights[3] = 0.5;
-    weights[4] = 0.2;
-
-    float sum = weights[0];
-    vec4 color = texture2D(texUSampler, texCoord) * weights[0];
-
-    if (horizontal) {
-
-      for (int i = 1; i < 5; i++) {
-        color += texture2D(texUSampler, texCoord + onePixel * vec2(5*i,  0)) * weights[i];
-        color += texture2D(texUSampler, texCoord - onePixel * vec2(5*i,  0)) * weights[i];
-        sum += 2.0 * weights[i];
-      }
-
-    } else {
-
-      for (int i = 1; i < 5; i++) {
-        color += texture2D(texUSampler, texCoord + onePixel * vec2(0,  5*i)) * weights[i];
-        color += texture2D(texUSampler, texCoord - onePixel * vec2(0,  5*i)) * weights[i];
-        sum += 2.0 * weights[i];
-      }
-
-    }
-
-    if (sum == 0.0) {sum = 1.0;}
-
-    gl_FragColor = vec4(color.rgb / sum, 1.0);
-  }
-
-  </script>
-
+  <!--
+    This is the mixer fragment shader. It takes values from two different
+    textures and adds them together before rendering the result.
+  -->
   <script id = "mixer-fragment-shader" type = "x-shader/x-fragment">
 
   precision highp float;
 
   varying vec2 texCoord;
 
-  uniform sampler2D texUSampler1;
-  uniform sampler2D texUSampler2;
+  uniform sampler2D uSampler1;
+  uniform sampler2D uSampler2;
 
   void main() {
-    gl_FragColor = vec4(texture2D(texUSampler1, texCoord).rgb + 
-                        texture2D(texUSampler2, texCoord).rgb, 1.0);
+    gl_FragColor = vec4(texture2D(uSampler1, texCoord).rgb + 
+                        texture2D(uSampler2, texCoord).rgb, 1.0);
   }
 
   </script>
+
+  <!--
+    This is the fragment shader that generates the star image. It is based
+    on a shader made by mu6k on Shadertoy.com, which can be found here:
+
+    https://www.shadertoy.com/view/4sX3Rs#
+
+    I have taken inspiration from many of his expressions, although perhaps
+    the most notable influence his work had on our project was the color
+    of the star.
+
+    The shader works by considering interpolated x and y values across a
+    texture. Brightness values can be determined for each of these points
+    given just the star's point on the screen and the brightness of the
+    image. After the initial variables are calculated, the color variable
+    goes through a series of additions, all of which contribute things
+    bloom, lens flare, etc. For the randomized elements of the rendering,
+    we use a noise texture.
+
+    The stars point on the screen is determined by sending just the
+    origin through the perspective rendering transformations.
+  -->
 
   <script id = "lens-fragment-shader" type = "x-shader/x-fragment">
 
@@ -185,18 +169,25 @@ canvas {
 
   uniform float brightness;
 
+  uniform bool forcePoint;
+  uniform vec3 forcePointVec;
+
   uniform mat4 pMatrix;
   uniform mat4 mvMatrix;
 
   void main() {
     const float PI = 3.141592653589793238462643383;
 
-    vec4 rawPos = (pMatrix * mvMatrix * vec4(0.0,0.0,0.0,1.0)) / (pMatrix * mvMatrix * vec4(0.0,0.0,0.0,1.0)).w;
+    vec4 point = vec4(0.0,0.0,0.0,1.0);
+
+    if (forcePoint) {point = vec4(forcePointVec,1.0);}
+
+    vec4 rawPos = (pMatrix * mvMatrix * point) / (pMatrix * mvMatrix * point).w;
 
     vec2 mainPos = rawPos.xy;
 
     vec2 uv = (texCoord  - vec2(0.5,0.5)) * 2.0;
-    //uv.y *= aspect;
+
     vec2 uvd = uv  * length(uv);
     
     vec2 mainVector = uv-mainPos;
@@ -207,9 +198,6 @@ canvas {
 
     color += color * (sin(n * 8.0) / 20.0 + 0.5 + n * 0.25);
 
-
-    //color += max(0.1/pow(mainPos.y - uv.y,0.6)*(1.0-0.1*pow(mainPos.x - uv.x,2.0)), 0.0);
-
     vec2 uvx = mix(uv, uvd, -0.5);
     color += max(0.0,0.01-pow(length(uvx+0.2*mainPos),1.9))*7.0;
     color += max(0.0,0.01-pow(length(uvx+0.3*mainPos),1.9))*10.0;
@@ -217,27 +205,25 @@ canvas {
     color += max(0.0,0.01-pow(length(uvx+1.4*mainPos),1.2))*15.0;
     color += max(0.0,0.01-pow(length(uvx+1.5*mainPos),1.4))*10.0;
 
-    color += max(0.0,0.01-pow(length(uvx-0.7*mainPos),2.3))*10.0;
+    color += max(0.0,0.01-pow(length(uvx-0.7*mainPos),3.3))*10.0;
     color += max(0.0,0.01-pow(length(uvx-0.6*mainPos),2.0))*10.0;
 
     color += max(0.0,0.01-pow(length(uvx+2.5*mainPos),1.9))*4.0;
     color += max(0.0,0.01-pow(length(uvx+3.5*mainPos),1.9))*2.0;
 
-    float alpha = length(color);
-
     color -= vec3(length(uvd) * 0.05);
 
-    if (mainPos.x > 1.0) {color *= 0.0;}
-    if (mainPos.x < -1.0) {color *= 0.0;}
+    if (mainPos.x >  1.0) {color *= max(0.0, 2.0 - mainPos.x);}
+    if (mainPos.x < -1.0) {color *= max(0.0, 2.0 + mainPos.x);}
 
-    if (mainPos.y > 1.0) {color *= 0.0;}
-    if (mainPos.y < -1.0) {color *= 0.0;}
+    if (mainPos.y >  1.0) {color *= max(0.0, 2.0 - mainPos.y);}
+    if (mainPos.y < -1.0) {color *= max(0.0, 2.0 + mainPos.y);}
 
     if (rawPos.z > 1.0) {color *= 0.0;}
 
     color *= brightness;
 
-    gl_FragColor = vec4(vec3(1.0, 1.25, 1.7) * color,alpha);
+    gl_FragColor = vec4(vec3(1.4, 1.2, 1.0) * color, 1.0);
     }
 
   </script>

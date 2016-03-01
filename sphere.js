@@ -47,29 +47,3 @@ function sphere(k) {
     texCoords: texCoords
   }
 }
-
-function processSphere(s) {
-  var points = s.verts;
-  var tris = s.tris;
-  var verts = [];
-  var norms = [];
-  tris.forEach(function(tri) {
-    verts.push(points[tri[0]]);
-    verts.push(points[tri[1]]);
-    verts.push(points[tri[2]]);
-    normal = vec4(
-        normalize(cross(
-        subtract(points[tri[2]], points[tri[0]]),
-        subtract(points[tri[1]], points[tri[0]]),
-        true
-      )), 0);
-    norms.push(normal);
-    norms.push(normal);
-    norms.push(normal);
-  });
-  return {
-    verts : verts,
-    norms : norms
-    //txc : txc
-  };
-}
